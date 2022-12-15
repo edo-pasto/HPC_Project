@@ -1,15 +1,14 @@
-#include "stdio.h" // printf
-#include "stdlib.h" // malloc and rand for instance. Rand not thread safe!
-#include "time.h"   // time(0) to get random seed
+#include "stdio.h" 
+#include "stdlib.h" 
+#include "time.h"  
 #include "math.h"
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <cuda_runtime.h>
-#include <memory>  // sine and cosine
-
-
+#include <memory> 
 __device__ void fibonacci(int number, int* res);
 __global__ void fibonacciParent(int* number, int* res);
+// __global__ void fibonacci(int number, int* res);
 int initial_fibonacci_run(int fib, int currentDepth, int targetDepth);
 
 int getSPcores(cudaDeviceProp devProp)
@@ -79,8 +78,9 @@ int calc_CUDA_Fibonacci(int number){
 
     // How deep we need to go into the recursion before we spawn threads
     depth = floor(log2((double)CUDACoreCount));
-
-    return initial_fibonacci_run(number, 0, depth);
+    // printf("   \n%d\n   ",depth);
+    int x = initial_fibonacci_run(number, 0, depth);   
+    return x;
 
 
 }
@@ -91,28 +91,26 @@ int main(int argc, char* argv[]){
         printf("Error: You have to insert the input number for fibonacci!\n");
         return 0;
     }
-    // cudaEvent_t start, stop;
-    // cudaEventCreate(&start);
-    // cudaEventCreate(&stop);
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
 
     printf("The input number for fibonacci is: %s\n", argv[1]);
 
     int number = atoi(argv[1]);
     int res;
-    // float elapsedTime;
-   
-    // fibonacciParent<<<2, 64>>>(&number, &res);
-
-    // cudaEventRecord(start, 0);
+    float elapsedTime;
+    
+    cudaEventRecord(start, 0);
 
     printf("The fibonacci of %s is %d\n", argv[1], calc_CUDA_Fibonacci(number));
     
-    // cudaEventRecord(stop, 0);
-    // cudaEventSynchronize(stop);
-    // cudaEventElapsedTime(&elapsedTime, start, stop);    
-    // printf("Fibonacci computation in %f seconds\n",elapsedTime/1000);
-    // cudaEventDestroy(start);
-    // cudaEventDestroy(stop);
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsedTime, start, stop);    
+    printf("Fibonacci computation in %f seconds\n",elapsedTime/1000);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }
 
 int initial_fibonacci_run(int fib, int currentDepth, int targetDepth){
@@ -123,32 +121,17 @@ int initial_fibonacci_run(int fib, int currentDepth, int targetDepth){
         return initial_fibonacci_run(fib - 1, currentDepth++, targetDepth) + initial_fibonacci_run(fib - 2, currentDepth++, targetDepth);
 
     int *d_fib, *d_result;
-    int size = sizeof(int);
 
+    int size = sizeof(int);
     cudaMalloc((void**)&d_fib, size);
     cudaMalloc((void**)&d_result, size);
 
     cudaMemcpy(d_fib, &fib, size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_result, 0, size, cudaMemcpyHostToDevice);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-
-    float elapsedTime;
-    cudaEventRecord(start, 0);
-
-    fibonacciParent<<<1, 1>>>(d_fib, d_result);
-
-    cudaEventRecord(stop, 0);
-    cudaEventSynchronize(stop);
-    cudaEventElapsedTime(&elapsedTime, start, stop);    
-    // double run_time = omp_get_wtime() - start_time;
-    printf("Fibonacci computation of a single thread in %f seconds\n",elapsedTime/1000);
-    // printf("The fibonacci of %s is %d\n", argv[1], res);
-
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+    int threadsPerBlock = 64;
+    int blocksPerGrid = (fib + threadsPerBlock - 1) / threadsPerBlock;
+    fibonacciParent<<<blocksPerGrid, threadsPerBlock>>>(d_fib, d_result);
     int result = 0;
     cudaMemcpy(&result, d_result, size, cudaMemcpyDeviceToHost);    
 
@@ -157,10 +140,21 @@ int initial_fibonacci_run(int fib, int currentDepth, int targetDepth){
     return result;
 }
 
+// __global__ void fibonacciParent(int* number, int* res){
+
+//     fibonacci(*number, res);
+//     cudaDeviceSynchronize();
+//     return;
+
+// }
+
 __global__ void fibonacciParent(int* number, int* res){
 
-    fibonacci(*number, res);
-    cudaDeviceSynchronize();
+    int i = blockDim.x * blockIdx.x + threadIdx.x;
+    if(i < *number){
+        fibonacci(*number, res);
+    }
+   
     return;
 
 }
@@ -177,5 +171,4 @@ __device__ void fibonacci(int number, int* res){
 
         fibonacci(number - 1, res);
         fibonacci(number - 2, res);
-
 }
