@@ -1,0 +1,18 @@
+CC=mpicc
+
+all: fib mpi-fib-start
+
+fib: fib.c mpi-fib-start.c
+	$(CC) $(CFLAGS) -o fib fib.c
+
+mpi2-fib-start: mpi2-fib-start.c
+	$(CC) $(CFLAGS) -o mpi-fib-start mpi2-fib-start.c
+
+clean:
+	/bin/rm -f fib mpi-fib-start *.o
+
+run:
+	mpirun -np 1 mpi-fib-start 10
+
+
+

@@ -8,7 +8,7 @@
 #include <memory> 
 __device__ void fibonacci(int number, int* res);
 __global__ void fibonacciParent(int* number, int* res);
-// __global__ void fibonacci(int number, int* res);
+
 int initial_fibonacci_run(int fib, int currentDepth, int targetDepth);
 
 int getSPcores(cudaDeviceProp devProp)
@@ -140,14 +140,6 @@ int initial_fibonacci_run(int fib, int currentDepth, int targetDepth){
     return result;
 }
 
-// __global__ void fibonacciParent(int* number, int* res){
-
-//     fibonacci(*number, res);
-//     cudaDeviceSynchronize();
-//     return;
-
-// }
-
 __global__ void fibonacciParent(int* number, int* res){
 
     int i = blockDim.x * blockIdx.x + threadIdx.x;
@@ -167,7 +159,6 @@ __device__ void fibonacci(int number, int* res){
     }
 
     int i =  blockIdx.x * blockDim.x + threadIdx.x;
-    int x, y;
 
         fibonacci(number - 1, res);
         fibonacci(number - 2, res);
