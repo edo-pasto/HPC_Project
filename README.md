@@ -26,6 +26,8 @@
 
 ├── README.md
 
+├── Report_ProjectHPC_Pastorino_Sadeghi.pdf
+
 ├── fibonacci_OpenMP
 
 │   ├── fibonacci_par1.c
